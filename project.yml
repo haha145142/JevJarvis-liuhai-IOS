@@ -1,0 +1,122 @@
+name: JevJarvis
+options:
+  bundleIdPrefix: com.jevchat
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: 75LZ93U5CF
+    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.1.0"
+    GENERATE_INFOPLIST_FILE: false
+
+targets:
+  JevJarvis:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: App/Assets.xcassets
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jevchat.jarvis
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/JevJarvis.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Jev Jarvis
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: App/JevJarvis.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.jevchat.jarvis
+    dependencies:
+      - target: JevKeyboard
+
+  JevKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Keyboard/Sources
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jevchat.jarvis.keyboard
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_FILE: Keyboard/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Keyboard/JevKeyboard.entitlements
+        SKIP_INSTALL: true
+    info:
+      path: Keyboard/Info.plist
+      properties:
+        CFBundleDisplayName: Jev 键盘
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSExtension:
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            # PrimaryLanguage 必须有值(缺失会让键盘弹起时宿主直接崩),但也不能用 zh-Hans:
+            # 审核环境(英文系统/听写语言未启用)查 zh-Hans 的听写语言拿到 nil,系统 TextInput
+            # 会以 setObject:forKey: 传 nil 把宿主 App 崩掉(2026-09-23 真机 6 连崩实证)。
+            # en-US 的听写元数据所有设备都有,规避这条系统 bug;键盘 UI 本身仍是中文。
+            PrimaryLanguage: en-US
+            RequestsOpenAccess: true
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+    entitlements:
+      path: Keyboard/JevKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.jevchat.jarvis
+
+  JevJarvisUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jevchat.jarvis.uitests
+        TEST_TARGET_NAME: JevJarvis
+        GENERATE_INFOPLIST_FILE: true
+        SKIP_INSTALL: true
+    dependencies:
+      - target: JevJarvis
+
+schemes:
+  JevJarvis:
+    build:
+      targets:
+        JevJarvis: all
+        JevJarvisUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - JevJarvisUITests
+  JevKeyboard:
+    build:
+      targets:
+        JevKeyboard: all

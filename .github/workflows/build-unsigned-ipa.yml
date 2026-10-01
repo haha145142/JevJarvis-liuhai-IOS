@@ -1,0 +1,62 @@
+name: 云编译 · 未签名 IPA（全能签自签用）
+
+# 用法：把仓库推到 GitHub → Actions 页手动点「Run workflow」，
+# 几分钟后下载「JevJarvis-unsigned-ipa」，用全能签/爱思等自签工具签名安装。
+# 或推送 v* 标签自动触发。
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 查看工具链
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: 编译 App + 键盘扩展（不签名）
+        run: |
+          xcodebuild \
+            -project JevJarvis.xcodeproj \
+            -scheme JevJarvis \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            build
+
+      - name: 组装未签名 IPA
+        run: |
+          APP=build/Build/Products/Release-iphoneos/JevJarvis.app
+          if [ ! -d "$APP" ]; then
+            echo "找不到编译产物：$APP"
+            ls -R build/Build/Products
+            exit 1
+          fi
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr JevJarvis-unsigned.ipa Payload
+          echo "== 产物清单 =="
+          find Payload -type d \( -name '*.app' -o -name '*.appex' \) | sed 's/^/  /'
+          ls -lh JevJarvis-unsigned.ipa
+
+      - name: 上传 IPA（Actions 页可下载）
+        uses: actions/upload-artifact@v4
+        with:
+          name: JevJarvis-unsigned-ipa
+          path: JevJarvis-unsigned.ipa
+          if-no-files-found: error
