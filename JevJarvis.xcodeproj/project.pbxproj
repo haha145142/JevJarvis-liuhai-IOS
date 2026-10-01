@@ -81,7 +81,7 @@
 		66DAB25961984A009B2F4762 /* JevJudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevJudge.swift; sourceTree = "<group>"; };
 		7DA29D4259AB9334A52ED37A /* TonesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TonesView.swift; sourceTree = "<group>"; };
 		8C0239472D88197A3E899EE4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		F1E2D3C4B5A69788796A5B4C /* KnowledgeLibrary */ = {isa = PBXFileReference; lastKnownFileType = folder; name = KnowledgeLibrary; path = Resources/KnowledgeLibrary; sourceTree = "<group>"; };
+		F1E2D3C4B5A69788796A5B4C /* KnowledgeLibrary */ = {isa = PBXFileReference; lastKnownFileType = folder; path = KnowledgeLibrary; sourceTree = "<group>"; };
 		F1E2D3C4B5A69788796A5B4E /* KnowledgeLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeLibraryView.swift; sourceTree = "<group>"; };
 		8C04CB501B0AA12526FFF1A3 /* JevPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevPrompts.swift; sourceTree = "<group>"; };
 		7DEBFC430E9A2EFFCFE17447 /* JevKnowledge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevKnowledge.swift; sourceTree = "<group>"; };
@@ -143,7 +143,7 @@
 			isa = PBXGroup;
 			children = (
 				8C0239472D88197A3E899EE4 /* Assets.xcassets */,
-				F1E2D3C4B5A69788796A5B4C /* KnowledgeLibrary */,
+				F1E2D3C4B5A69788796A5B50 /* Resources */,
 				5920CD5F219BFDBDF9DE0CC8 /* Sources */,
 			);
 			path = App;
@@ -179,6 +179,14 @@
 				26A99106EB29AE45E033BD0F /* Sources */,
 			);
 			path = Keyboard;
+			sourceTree = "<group>";
+		};
+		F1E2D3C4B5A69788796A5B50 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F1E2D3C4B5A69788796A5B4C /* KnowledgeLibrary */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
