@@ -7,12 +7,15 @@ import SwiftUI
 struct KnowledgeLibraryView: View {
     @EnvironmentObject private var store: ConfigStore
 
+    private var practical: [BundledLibrary.Doc] { BundledLibrary.docs(subdir: "practical") }
+    private var tong: [BundledLibrary.Doc] { BundledLibrary.docs(subdir: "tong") }
+
     var body: some View {
         List {
             Section {
                 ForEach(DOG_HEAD_DOCS, id: \.id) { doc in
                     NavigationLink {
-                        Reader(title: doc.title, body: doc.body)
+                        Reader(title: doc.title, content: doc.body)
                     } label: {
                         Text("《\(doc.title)》").font(.subheadline)
                     }
@@ -23,11 +26,10 @@ struct KnowledgeLibraryView: View {
                                   en: "Core methods · \(DOG_HEAD_DOCS.count) (used by the keyboard)"))
             }
 
-            let practical = BundledLibrary.docs(subdir: "practical")
             Section {
                 ForEach(practical) { doc in
                     NavigationLink {
-                        Reader(title: doc.title, body: doc.body)
+                        Reader(title: doc.title, content: doc.body)
                     } label: {
                         Text("《\(doc.title)》").font(.subheadline)
                     }
@@ -38,11 +40,10 @@ struct KnowledgeLibraryView: View {
                                   en: "Practical guides · \(practical.count) (App only, not in the keyboard)"))
             }
 
-            let tong = BundledLibrary.docs(subdir: "tong")
             Section {
                 ForEach(tong) { doc in
                     NavigationLink {
-                        Reader(title: doc.title, body: doc.body)
+                        Reader(title: doc.title, content: doc.body)
                     } label: {
                         Text("《\(doc.title)》").font(.subheadline)
                     }
@@ -60,10 +61,10 @@ struct KnowledgeLibraryView: View {
 /// 纯文本阅读页（等宽排版、可滚动）。
 private struct Reader: View {
     let title: String
-    let body: String
+    let content: String
     var body: some View {
         ScrollView {
-            Text(body)
+            Text(content)
                 .font(.system(size: 14))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
