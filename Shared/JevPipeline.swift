@@ -17,6 +17,8 @@ struct Candidate: Identifiable, Equatable {
 struct Analysis: Equatable {
     var message: String
     var judge: JudgeResult?
+    /// 狗头军师大脑的一句话判断（relationship 首句），走新大脑时结果页头部显示它。
+    var headline: String = ""
     /// 判断结果来自生成模型推测（Jev 判断层未配置时的兜底），界面标注「模型推测」
     var judgeSpeculative: Bool = false
     var candidates: [Candidate] = []

@@ -22,6 +22,10 @@ final class KeyboardViewController: UIInputViewController {
     private var mode: Mode = .idle
     private var lastSource: Source = .clipboard
     private var lastMessage: String = ""
+    /// 上一次分析用的自动分段，「换一批」直接复用。
+    private var lastSegments: [GoutouSegment] = []
+    /// 狗头军师人格文本（从 bundle 里读一次缓存）。
+    private var skillText: String = ""
     private var analysis: Analysis?
     private var errorText: String = ""
     private var stageLabel = UILabel()
@@ -377,37 +381,10 @@ final class KeyboardViewController: UIInputViewController {
         btnRow.distribution = .fillEqually
         btnRow.heightAnchor.constraint(equalToConstant: 44).isActive = true
 
-        // 话术：点进去直接在键盘上选（写回共享配置，App 的「话术」页看到的是同一份）
-        let tonesBtn = KB.button(
-            cfg.activeSlots.isEmpty
-                ? L("话术：都没选（点这里选）", "Tones: none selected")
-                : L("话术：", "Tones: ") + cfg.activeSlots.map { localizedToneName($0, language: language) }.joined(separator: " · "),
-            icon: "theatermasks")
-        tonesBtn.heightAnchor.constraint(equalToConstant: 34).isActive = true
-        tonesBtn.addTarget(self, action: #selector(openTonePicker), for: .touchUpInside)
-
-        // 上下文：点这一行进管理面板（查看/加入/清空）；右边「+」把剪贴板内容快速加入。
-        let ctxCount = JevContext.count
-        let contextBtn = KB.button(
-            ctxCount == 0
-                ? L("上下文：无（点这里添加）", "Context: none (tap to add)")
-                : L("上下文：\(ctxCount) 条（点这里管理）", "Context: \(ctxCount) (tap to manage)"),
-            icon: "bubble.left.and.bubble.right")
-        contextBtn.addTarget(self, action: #selector(openContext), for: .touchUpInside)
-        let contextPlus = KB.button("", icon: "plus")
-        contextPlus.addTarget(self, action: #selector(quickAddContext), for: .touchUpInside)
-        NSLayoutConstraint.activate([
-            contextPlus.widthAnchor.constraint(equalToConstant: 44),
-            contextPlus.heightAnchor.constraint(equalToConstant: 34),
-        ])
-        let contextRow = UIStackView(arrangedSubviews: [contextBtn, contextPlus])
-        contextRow.axis = .horizontal
-        contextRow.spacing = 8
-
-        // 待机页**不放**发送键：这一页还没有候选，没有可发的东西；而输入框一旦有字，
-        // 宿主 App 自己的发送按钮就出来了，
-        // 键盘下方再挂一个只是添乱。发送键只在结果页——点完候选、手还在面板上时用。
-        var blocks: [UIView] = [guide, btnRow, tonesBtn, contextRow]
+        // 简化界面：待机页只留「分析剪贴板 / 分析输入框」两个入口，
+        // 不再放「话术槽」「上下文管理」——回复风格统一由内置狗头军师大脑决定，
+        // 剪贴板内容会自动分段（在 GoutouSegmentBuilder 里）。
+        var blocks: [UIView] = [guide, btnRow]
         if !JevDraft(cfg: cfg).isConfigured {
             let warn = KB.label(L("⚠️ 还没配置生成层：打开 Jev Jarvis App →「模型」页填 API Key，或直接在键盘上配置（点下面按钮）", "⚠️ Generation is not configured: add an API key in Jev Jarvis → Models, or configure it right here on the keyboard"),
                                 font: .systemFont(ofSize: 12), color: .systemOrange, lines: 0)
@@ -811,7 +788,12 @@ final class KeyboardViewController: UIInputViewController {
         // 判断头
         let header = KB.cardView()
         var headerItems: [UIView] = []
-        if let jr = a.judge {
+        if !a.headline.isEmpty {
+            // 狗头军师大脑：relationship 第一句「人话判断」，一眼看清对方的意思。
+            let head = KB.label(a.headline, font: .systemFont(ofSize: 14, weight: .semibold),
+                                color: KB.brand, lines: 0)
+            headerItems.append(head)
+        } else if let jr = a.judge {
             if a.judgeSpeculative {
                 // 判断层未配置时的模型推测兜底（融合版「军师判断参考」）
                 let acts = localizedActions(jr.actions, language: language).joined(separator: " · ")
@@ -1018,16 +1000,11 @@ final class KeyboardViewController: UIInputViewController {
             setMode(.error)
             return
         }
-        // 一次复制了多行（多条消息）时：最后一行当作"要回复的最新消息"，
-        // 前面各行自动并入上下文——这样复制整段对话也能结合上下文，而不是只回最后一句。
-        let lines = autoreleasepool { JevContext.lines(from: raw) }
-        if lines.count >= 2 {
-            let prior = Array(lines.prefix(lines.count - 1))
-            JevContext.appendMany(role: JevContext.roleOther, texts: prior)
-            run(message: lines[lines.count - 1])
-        } else {
-            run(message: lines.first ?? raw)
-        }
+        // 自动分段：整段话逐句拆成「对方」段落（一次复制多条消息也一样），
+        // 最后一句当作要回复的最新消息。模型会先编号通读全部内容，不再只回最后一句。
+        let segments = GoutouSegmentBuilder.segments(from: raw)
+        let displayMessage = segments.last?.text ?? raw
+        run(segments: segments, displayMessage: displayMessage)
     }
 
     @objc private func analyzeInputField() {
@@ -1040,53 +1017,62 @@ final class KeyboardViewController: UIInputViewController {
             setMode(.error)
             return
         }
-        run(message: text)
+        let segments = GoutouSegmentBuilder.segments(from: text)
+        run(segments: segments, displayMessage: text)
     }
 
-    @objc private func regenerate() { run(message: lastMessage) }
+    @objc private func regenerate() {
+        guard !lastSegments.isEmpty else { backToIdle(); return }
+        run(segments: lastSegments, displayMessage: lastMessage)
+    }
     @objc private func backToIdle() { setMode(.idle) }
 
-    private func run(message: String) {
-        lastMessage = message
-        setMode(.loading)
-        stageLabel.text = L("判断中…", "Judging…")
-        // 合并配置：App Group 共享优先，键盘本地兜底（自签环境 App Group 可能不共享）
-        let pipeline = JevPipeline(cfg: JevStore.mergedConfigForKeyboard())
-        // 多消息上下文：把累积的历史对话渲染成带说话人的文本一并喂给判断层与生成层。
-        let turns = JevContext.load()
-        let lang = language
-        let contextText: String? = turns.isEmpty ? nil : JevContext.promptBlock(turns, language: lang)
+    /// 从键盘扩展 bundle 里读取狗头军师人格（GoutouSkill.md），读一次缓存。
+    private func loadSkillText() -> String {
+        if !skillText.isEmpty { return skillText }
+        if let url = Bundle.main.url(forResource: "GoutouSkill", withExtension: "md"),
+           let text = try? String(contentsOf: url, encoding: .utf8) {
+            skillText = text
+        }
+        return skillText
+    }
 
-        Task { @MainActor [weak self] in
-            let analysis = await pipeline.analyze(
-                message: message, context: contextText,
-                onStage: { [weak self] stage in
-                    Task { @MainActor in
-                        switch stage {
-                        case .judging: self?.stageLabel.text = self?.L("判断中…", "Judging…")
-                        case .drafting(let done, let total):
-                            self?.stageLabel.text = self?.L("生成中 \(done)/\(total)…", "Drafting \(done)/\(total)…")
-                        case .ranking: self?.stageLabel.text = self?.L("排序中…", "Ranking…")
-                        case .done: self?.stageLabel.text = self?.L("完成", "Done")
-                        }
-                    }
-                },
-                onPartial: { [weak self] partial in
-                    // 第一条话术的候选一到就先出面板，不等其余话术、更不等排序。
-                    // 用消息文本挡一下，别让上一轮的迟到结果盖掉新一轮。
-                    Task { @MainActor in
-                        guard let self, self.lastMessage == partial.message else { return }
-                        self.analysis = partial
+    /// 跑一次狗头军师大脑：一次请求 → 一句话判断 + 6~8 条成品回复。
+    private func run(segments: [GoutouSegment], displayMessage: String) {
+        lastSegments = segments
+        lastMessage = displayMessage
+        setMode(.loading)
+        stageLabel.text = L("军师分析中…", "Analyzing…")
+
+        let cfg = JevStore.mergedConfigForKeyboard()
+        let skill = loadSkillText()
+
+        guard !skill.isEmpty else {
+            self.errorText = L("军师人格没打进包，需要重新构建一次。", "Strategist persona missing from the bundle; rebuild needed.")
+            setMode(.error)
+            return
+        }
+
+        GoutouBrainClient.analyze(config: cfg, skill: skill, segments: segments) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                switch result {
+                case .success(let value):
+                    let candidates = value.replies.map { Candidate(text: $0, tone: "军师", prob: nil) }
+                    var out = Analysis(message: displayMessage)
+                    out.headline = value.headline
+                    out.candidates = candidates
+                    self.analysis = out
+                    if candidates.isEmpty {
+                        self.errorText = L("这次没出回复，点「换一批」再试一次。", "No replies this time. Tap Regenerate.")
+                        self.setMode(.error)
+                    } else {
                         self.setMode(.result)
                     }
-                })
-            guard let self else { return }
-            self.analysis = analysis
-            if let fatal = analysis.fatalError {
-                self.errorText = fatal
-                self.setMode(.error)
-            } else {
-                self.setMode(.result)
+                case .failure(let error):
+                    self.errorText = error.localizedDescription
+                    self.setMode(.error)
+                }
             }
         }
     }
