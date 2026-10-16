@@ -7,6 +7,7 @@ name: 云编译 · 未签名 IPA（全能签自签用）
 on:
   workflow_dispatch:
   push:
+    branches: ["**"]
     tags: ["v*"]
 
 concurrency:
@@ -25,6 +26,14 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+
+      - name: 用 XcodeGen 生成工程（新增文件与 GoutouSkill.md 自动纳入）
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen generate
+          test -d JevJarvis.xcodeproj
 
       - name: 编译 App + 键盘扩展（不签名）
         run: |
