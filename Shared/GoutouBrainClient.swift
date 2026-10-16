@@ -14,7 +14,8 @@ import FoundationNetworking
 enum GoutouBrainClient {
 
     static let timeout: TimeInterval = 90
-    static let temperature: Double = 0.7
+    /// 略高的随机性，让回复更像真人随口说、候选之间差异更明显（0.7 偏工整）。
+    static let temperature: Double = 0.85
     /// 推理模型会把思考也算进预算，要给足，否则只剩思考没有正文。
     static let maxTokens = 8192
 
