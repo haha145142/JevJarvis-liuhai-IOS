@@ -40,16 +40,16 @@ struct GoutouBrainResult: Equatable {
     let headline: String
     let meaning: String
     let relationship: String
-    /// 6~8 条可直接发送的成品回复。
+    /// 4~5 条可直接发送的成品回复。
     let replies: [String]
     let reason: String
 }
 
 enum GoutouBrain {
 
-    /// 一次给多少条回复。skill 里写 2~3 条，这里按 6~8 条要，并要求角度拉开。
-    static let minReplies = 6
-    static let maxReplies = 8
+    /// 一次给多少条回复。用户要精简好选，按 4~5 条要，并要求角度拉开。
+    static let minReplies = 4
+    static let maxReplies = 5
     static let headlineLimit = 20
 
     /// 写死成狗头军师面板的默认值（简化界面不放任务/风格选择器）。

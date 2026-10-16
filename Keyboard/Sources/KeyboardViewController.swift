@@ -1037,7 +1037,7 @@ final class KeyboardViewController: UIInputViewController {
         return skillText
     }
 
-    /// 跑一次狗头军师大脑：一次请求 → 一句话判断 + 6~8 条成品回复。
+    /// 跑一次狗头军师大脑：一次请求 → 一句话判断 + 4~5 条成品回复。
     private func run(segments: [GoutouSegment], displayMessage: String) {
         lastSegments = segments
         lastMessage = displayMessage
