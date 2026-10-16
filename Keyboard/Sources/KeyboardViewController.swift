@@ -1064,7 +1064,7 @@ final class KeyboardViewController: UIInputViewController {
                     out.candidates = candidates
                     self.analysis = out
                     if candidates.isEmpty {
-                        self.errorText = L("这次没出回复，点「换一批」再试一次。", "No replies this time. Tap Regenerate.")
+                        self.errorText = self.L("这次没出回复，点「换一批」再试一次。", "No replies this time. Tap Regenerate.")
                         self.setMode(.error)
                     } else {
                         self.setMode(.result)
